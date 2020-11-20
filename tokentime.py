@@ -48,7 +48,7 @@ def check_contenders(value) :
             current_hour = int(str(now.time()).split(':')[0])
             current_min = int(str(now.time()).split(':')[1])
 
-            if(current_min <= 10 and current_hour == est):
+            if(current_min == 0 and current_hour == est):
                 send("Token time! https://overwatchleague.com/en-us/contenders")
 
 EU_CONTENDERS_ID = 2
