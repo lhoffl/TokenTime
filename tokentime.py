@@ -7,6 +7,8 @@ import http.client
 from dateutil import parser
 from bs4 import BeautifulSoup
 from datetime import datetime
+from os import path
+from pathlib import Path
 
 def send(message):
 
@@ -25,41 +27,23 @@ def send(message):
 
     return result.decode("utf-8")
 
-def check_contenders(value) :
 
-    schedule = data['props']['pageProps']['blocks'][2]['tabs']['tabs'][value]
+lockFile = '/home/minecraftin/tokentime/token.lock'
+GAMES_PLAYED_TODAY = path.exists(lockFile)
 
-    html = schedule['blocks'][0]['richTextEditor']['articleRawHtml']
-    soup = BeautifulSoup(str(html), "lxml")
-    dates = soup.find_all('div', attrs={'class': 'schedule-row'})
+if(GAMES_PLAYED_TODAY):
+    quit()
 
-    now = datetime.now()
-
-    for date in dates:
-        d_str = date.find('div', attrs={'class' : 'schedule-date'}).text
-
-        if d_str == "Date":
-            continue
-
-        parsed_date = parser.parse(d_str)
-
-        if parsed_date.date() == now.date():
-            est = int(date.find('div', attrs={'class' : 'pacific-time'}).text.split(':')[0]) + 3
-            current_hour = int(str(now.time()).split(':')[0])
-            current_min = int(str(now.time()).split(':')[1])
-
-            if(current_min == 0 and current_hour == est):
-                send("Token time! https://overwatchleague.com/en-us/contenders")
-
-EU_CONTENDERS_ID = 2
-NA_CONTENDERS_ID = 4
-
-url = 'https://overwatchleague.com/en-us/contenders/schedule?tab=north_america'
+url = 'https://overwatchleague.com/en-us/schedule'
 response = requests.get(url)
 html = response.content
 
 soup = BeautifulSoup(html, "lxml")
 data = json.loads(soup.select("[type='application/json']")[0].string)
+matches = data['props']['pageProps']['blocks'][2]['schedule']['tableData']['events'][0]['matches']
 
-check_contenders(NA_CONTENDERS_ID)
-check_contenders(EU_CONTENDERS_ID)
+for match in matches:
+    if match['venue']['title'] == "West":
+        if match['venue']['InProgress'] and not GAMES_PLAYED_TODAY:
+            Path(lockFile).touch()
+            send("Kick it Simon, it's Token Time! <@ID> https://overwatchleague.com/en-us/")
