@@ -4,6 +4,8 @@ import os
 import json
 import datetime
 import http.client
+import time
+import math
 from dateutil import parser
 from bs4 import BeautifulSoup
 from datetime import datetime
@@ -12,7 +14,7 @@ from pathlib import Path
 
 def send(message):
 
-    webhookurl = "WEBHOOK_GOES_HERE"
+    webhookurl = "WEBHOOK"
 
     formdata = "------:::BOUNDARY:::\r\nContent-Disposition: form-data; name=\"content\"\r\n\r\n" + message + "\r\n------:::BOUNDARY:::--"
 
@@ -31,7 +33,10 @@ def send(message):
 lockFile = '/home/minecraftin/tokentime/token.lock'
 GAMES_PLAYED_TODAY = path.exists(lockFile)
 
-if(GAMES_PLAYED_TODAY):
+encoreLockFile = '/home/minecraftin/tokentime/encore.lock'
+ENCORE_TODAY = path.exists(encoreLockFile)
+
+if(ENCORE_TODAY and GAMES_PLAYED_TODAY):
     quit()
 
 url = 'https://overwatchleague.com/en-us/schedule'
@@ -43,7 +48,19 @@ data = json.loads(soup.select("[type='application/json']")[0].string)
 matches = data['props']['pageProps']['blocks'][2]['schedule']['tableData']['events'][0]['matches']
 
 for match in matches:
-    if match['venue']['title'] == "West":
-        if match['venue']['InProgress'] and not GAMES_PLAYED_TODAY:
-            Path(lockFile).touch()
-            send("Kick it Simon, it's Token Time! <@ID> https://overwatchleague.com/en-us/")
+    if match['venue']['title'] != "East":
+
+        startDate = math.floor(match['startDate'] / 1000) - 1800
+        currentDate = math.floor(time.time())
+
+        if currentDate >= startDate and match['status'] != "CONCLUDED":
+
+            matchInfo = match['competitors'][0]['name'] + " vs " + match['competitors'][1]['name']
+            print(matchInfo + " is the current game")
+
+            if not GAMES_PLAYED_TODAY and not match['isEncore']:
+                Path(lockFile).touch()
+                send("Kick it Simon, it's Token Time! <:outlawsBestTeam:603620338521211082> <@&779183041368555560> <:outlawsBestTeam:603620338521211082> https://overwatchleague.com/en-us/" + matchInfo + " is the first game of the day")
+            elif not ENCORE_TODAY and match['isEncore']:
+                Path(encoreLockFile).touch()
+                send("Kick it Simon, it's Encore Time! <:outlawsBestTeam:603620338521211082> <@&784536328481406998> <:outlawsBestTeam:603620338521211082> https://overwatchleague.com/en-us/" + matchInfo + " is the first encore game")
